@@ -2,17 +2,597 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lotus Mineral Visagie — Loyalty</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #ffffff; font-family: Georgia, serif; }
+    input, select { font-family: Georgia, serif; font-size: 14px; padding: 8px 10px; border: 0.5px solid #c0d9c4; border-radius: 8px; width: 100%; outline: none; }
+    input:focus, select:focus { border-color: #3d6b45; }
+  </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
+const { useState, useEffect } = React;
+
+const ADMIN_EMAIL = "admin@lotusmineral.nl";
+const ADMIN_PASSWORD = "lotus2024";
+const hashPw = (pw) => btoa(pw + "_lotus_salt");
+const GMAIL_URL = "https://lotus-mail.hidden-bar-0c43.workers.dev";
+const LOGO_URL = "https://raspy-dream-3061.hidden-bar-0c43.workers.dev/logo.jpg";
+
+const stuurAdminMail = async (naam, email, label) => {
+  try {
+    await fetch(GMAIL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: "info@lotusmineralvisagie.nl",
+        subject: "Nieuwe kortingsdrempel bereikt — " + naam,
+        htmlBody: "<p>Klant: <b>" + naam + "</b><br>Email: " + email + "<br>Beloning: <b>" + label + "</b></p><p>De klant heeft automatisch een e-mail ontvangen.</p>"
+      })
+    });
+  } catch(e) { console.error("Admin mail fout:", e); }
+};
+
+const stuurKlantMail = async (naam, email, label, code) => {
+  try {
+    const isAdvies = code === "ADVIES750";
+    const subject = isAdvies ? "Je hebt een gratis make-up adviesgesprek verdiend!" : "Jouw kortingscode van Lotus Mineral Visagie";
+    const htmlBody = isAdvies
+      ? "<div style='font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:30px 20px;'><div style='text-align:center;margin-bottom:20px;'><img src='" + LOGO_URL + "' width='150' alt='Lotus Mineral Visagie' /></div><h2 style='color:#3d6b45;font-weight:400;text-align:center;'>Gefeliciteerd, " + naam.split(" ")[0] + "!</h2><p style='color:#6b7c6e;text-align:center;margin:10px 0 20px;'>Je hebt 750 punten gespaard bij Lotus Mineral Visagie.</p><div style='background:#edf7ef;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;'><p style='color:#3d6b45;font-weight:500;font-size:16px;'>Gratis make-up adviesgesprek ter waarde van €29,95</p></div><p style='color:#6b7c6e;'>Tijdens dit gesprek kijk ik samen met jou naar de kleuren en producten die het beste bij jou passen.</p><p style='color:#6b7c6e;margin-top:10px;'>Neem contact met me op om een afspraak in te plannen:</p><p style='margin-top:10px;'><a href='mailto:info@lotusmineralvisagie.nl' style='color:#3d6b45;'>info@lotusmineralvisagie.nl</a><br><a href='https://www.lotusmineralvisagie.nl' style='color:#3d6b45;'>www.lotusmineralvisagie.nl</a></p><hr style='border:none;border-top:1px solid #c0d9c4;margin:20px 0;'/><p style='color:#6b7c6e;font-size:13px;'>Met vriendelijke groet,<br><b>Anita</b><br>Lotus Mineral Visagie</p></div>"
+      : "<div style='font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:30px 20px;'><div style='text-align:center;margin-bottom:20px;'><img src='" + LOGO_URL + "' width='150' alt='Lotus Mineral Visagie' /></div><h2 style='color:#3d6b45;font-weight:400;text-align:center;'>Gefeliciteerd, " + naam.split(" ")[0] + "!</h2><p style='color:#6b7c6e;text-align:center;margin:10px 0 20px;'>Je hebt een nieuwe kortingsdrempel bereikt.</p><div style='background:#edf7ef;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;'><p style='color:#6b7c6e;font-size:13px;'>Je korting</p><p style='color:#3d6b45;font-size:22px;font-weight:500;margin:8px 0;'>" + label + "</p><p style='color:#6b7c6e;font-size:13px;'>Jouw kortingscode</p><p style='color:#3d6b45;font-size:26px;font-weight:500;letter-spacing:0.1em;border:1px dashed #7aad82;border-radius:8px;padding:8px 16px;display:inline-block;margin-top:8px;'>" + code + "</p></div><p style='color:#6b7c6e;text-align:center;'>Gebruik deze code bij je volgende bestelling op <a href='https://www.lotusmineralvisagie.nl' style='color:#3d6b45;'>lotusmineralvisagie.nl</a></p><hr style='border:none;border-top:1px solid #c0d9c4;margin:20px 0;'/><p style='color:#6b7c6e;font-size:13px;text-align:center;'>Met vriendelijke groet,<br><b>Anita</b><br>Lotus Mineral Visagie<br><a href='mailto:info@lotusmineralvisagie.nl' style='color:#3d6b45;'>info@lotusmineralvisagie.nl</a></p></div>";
+    await fetch(GMAIL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: email, subject, htmlBody })
+    });
+  } catch(e) { console.error("Klant mail fout:", e); }
+};
+
+const C = { green:"#d2e8d5", greenDark:"#7aad82", greenDeep:"#3d6b45", greenLight:"#edf7ef", text:"#2c2c2a", textMuted:"#6b7c6e", white:"#ffffff", border:"#c0d9c4" };
+const fs = { fontFamily: "Georgia, serif" };
+const fmt = (n) => "€" + Number(n).toFixed(2).replace(".", ",");
+const fmtPts = (n) => Math.floor(n) + " punten";
+
+const defaultThresholds = [
+  { id:"t1", omzet:100,  korting:2.50,  label:"€2,50 korting",  code:"LOTUS100" },
+  { id:"t2", omzet:250,  korting:5.00,  label:"€5,00 korting",  code:"LOTUS200" },
+  { id:"t3", omzet:300,  korting:10.00, label:"€10,00 korting", code:"LOTUS300" },
+  { id:"t4", omzet:400,  korting:12.50, label:"€12,50 korting", code:"LOTUS400" },
+  { id:"t5", omzet:500,  korting:15.00, label:"€15,00 korting", code:"LOTUS500" },
+  { id:"t6", omzet:750,  korting:29.95, label:"Gratis make-up adviesgesprek (€29,95)", code:"ADVIES750" },
+];
+
+const getCurrentThreshold = (pts, thresholds) => {
+  const earned = thresholds.filter(t => pts >= t.omzet);
+  return earned.length > 0 ? earned[earned.length - 1] : null;
+};
+const getNextThreshold = (pts, thresholds) => thresholds.find(t => pts < t.omzet) || null;
+
+const useLS = (key, fallback) => {
+  const [val, setVal] = useState(() => {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+  });
+  const save = (v) => { setVal(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch {} };
+  return [val, save];
+};
+
+const Logo = () => (
+  <svg viewBox="0 0 120 120" width="56" height="56" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="58" r="38" fill={C.green} />
+    <g fill="none" stroke={C.text} strokeWidth="2" strokeLinecap="round">
+      <path d="M60 25 Q72 38 72 55 Q72 70 60 78 Q48 70 48 55 Q48 38 60 25Z" />
+      <path d="M60 78 Q38 72 32 58 Q30 44 44 38 Q50 50 60 55" />
+      <path d="M60 78 Q82 72 88 58 Q90 44 76 38 Q70 50 60 55" />
+      <path d="M30 82 Q45 70 60 78 Q75 70 90 82" />
+      <path d="M20 88 Q35 76 60 84 Q85 76 100 88" />
+      <path d="M57 40 Q56 44 55 48 Q54 52 55 56 Q56 60 58 63 Q59 65 60 67" strokeWidth="1.2" />
+      <path d="M55 48 Q53 49 52 51" strokeWidth="1.2" />
+      <path d="M55 56 Q53 57 52 59 Q53 61 55 61" strokeWidth="1.2" />
+      <path d="M58 63 Q56 64 55 66 Q56 68 58 68" strokeWidth="1.2" />
+    </g>
+  </svg>
+);
+
+const s = {
+  page: { ...fs, color:C.text, maxWidth:700, margin:"0 auto", padding:"1.5rem 1rem", background:C.white },
+  card: { background:C.white, border:"0.5px solid " + C.border, borderRadius:12, padding:"1.25rem" },
+  h3: { fontSize:16, fontWeight:500, margin:"0 0 0.75rem", color:C.greenDeep },
+  label: { fontSize:13, color:C.textMuted, display:"block", marginBottom:4 },
+  btnPrimary: { ...fs, cursor:"pointer", background:C.greenDeep, color:C.white, border:"none", padding:"9px 22px", borderRadius:8, fontWeight:500, fontSize:14 },
+  btnSm: { cursor:"pointer", fontSize:12, padding:"4px 10px", borderRadius:6, border:"0.5px solid " + C.border, background:"transparent", color:C.text },
+  btnDanger: { cursor:"pointer", fontSize:12, padding:"4px 10px", background:"transparent", border:"0.5px solid #e24b4a", color:"#a32d2d", borderRadius:6 },
+  btnSuccess: { cursor:"pointer", fontSize:12, padding:"4px 10px", background:"transparent", border:"0.5px solid " + C.greenDeep, color:C.greenDeep, borderRadius:6 },
+  tab: (a) => ({ ...fs, cursor:"pointer", padding:"8px 14px", borderRadius:8, fontWeight:a?500:400, background:a?C.green:"transparent", border:a?"0.5px solid " + C.border:"none", fontSize:13, color:a?C.greenDeep:C.textMuted }),
+  badge: (t) => ({ display:"inline-block", padding:"2px 8px", borderRadius:6, fontSize:12, fontWeight:500, background:t==="earn"?"#edf7ef":t==="redeem"?"#fcebeb":t==="pending"?"#fef9c3":"#f0fdf4", color:t==="earn"?C.greenDeep:t==="redeem"?"#a32d2d":t==="pending"?"#854d0e":"#166534" }),
+  metric: { background:C.greenLight, borderRadius:10, padding:"1rem", textAlign:"center", border:"0.5px solid " + C.border },
+  avatar: { width:36, height:36, borderRadius:"50%", background:C.green, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:500, color:C.greenDeep, border:"0.5px solid " + C.border, flexShrink:0 },
+};
+
 function App() {
-  return <h1>Lotus Test</h1>;
+  const [customers, setCustomers] = useLS("lotus_customers_v4", []);
+  const [requests, setRequests] = useLS("lotus_requests_v2", []);
+  const [thresholds, setThresholds] = useLS("lotus_thresholds_v1", defaultThresholds);
+  const [session, setSession] = useState(null);
+  const [view, setView] = useState("login");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPw, setLoginPw] = useState("");
+  const [loginErr, setLoginErr] = useState("");
+  const [adminTab, setAdminTab] = useState("customers");
+  const [selectedCust, setSelectedCust] = useState(null);
+  const [newCust, setNewCust] = useState({ name:"", email:"", password:"", birthday:"" });
+  const [addCustErr, setAddCustErr] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [discountCodes, setDiscountCodes] = useState({});
+  const [orderCust, setOrderCust] = useState("");
+  const [orderAmt, setOrderAmt] = useState("");
+  const [orderNr, setOrderNr] = useState("");
+  const [orderDesc, setOrderDesc] = useState("");
+  const [orderErr, setOrderErr] = useState("");
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [editingT, setEditingT] = useState(null);
+  const [newT, setNewT] = useState({ omzet:"", korting:"", code:"" });
+  const [tErr, setTErr] = useState("");
+  const [importErr, setImportErr] = useState("");
+  const [importSuccess, setImportSuccess] = useState("");
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("bedrag")) setOrderAmt(p.get("bedrag"));
+    if (p.get("order")) setOrderNr(p.get("order"));
+    if (p.get("bedrag") || p.get("email")) setAdminTab("orders");
+    if (p.get("email")) {
+      const match = customers.find(c => c.email.toLowerCase() === p.get("email").toLowerCase());
+      if (match) setOrderCust(String(match.id));
+    }
+  }, []);
+
+  const flash = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(""), 4000); };
+  const getCust = (id) => customers.find(c => c.id === id);
+  const pendingRequests = requests.filter(r => r.status === "pending");
+  const myRequests = session?.role === "customer" ? requests.filter(r => r.custId === session.id) : [];
+
+  const handleLogin = () => {
+    setLoginErr("");
+    if (loginEmail === ADMIN_EMAIL && loginPw === ADMIN_PASSWORD) { setSession({ role:"admin" }); setView("admin"); return; }
+    const c = customers.find(x => x.email === loginEmail && x.password === hashPw(loginPw));
+    if (c) { setSession({ role:"customer", id:c.id }); setView("customer"); return; }
+    setLoginErr("E-mailadres of wachtwoord onjuist.");
+  };
+
+  const logout = () => { setSession(null); setView("login"); setLoginEmail(""); setLoginPw(""); setSelectedCust(null); };
+
+  const processOrder = () => {
+    setOrderErr("");
+    const amt = parseFloat(orderAmt);
+    if (!orderCust) { setOrderErr("Selecteer een klant."); return; }
+    if (!amt || amt <= 0) { setOrderErr("Voer een geldig bedrag in."); return; }
+    const today = new Date().toISOString().slice(0,10);
+    const desc = orderDesc || ("Webshop bestelling" + (orderNr ? " #" + orderNr : ""));
+    const cid = parseInt(orderCust);
+    const cust = getCust(cid);
+    const prev = getCurrentThreshold(cust.totalSpend, thresholds);
+    const newSpend = cust.totalSpend + amt;
+    const next = getCurrentThreshold(newSpend, thresholds);
+    const newlyReached = next && (!prev || next.id !== prev.id);
+    setCustomers(customers.map(c => c.id === cid ? { ...c, totalSpend:newSpend, transactions:[{ date:today, desc, amount:amt, type:"purchase" }, ...c.transactions] } : c));
+    if (newlyReached) {
+      stuurKlantMail(cust.name, cust.email, next.label, next.code);
+      stuurAdminMail(cust.name, cust.email, next.label);
+    }
+    setOrderAmt(""); setOrderNr(""); setOrderCust(""); setOrderDesc("");
+    flash(fmtPts(amt) + " toegevoegd!" + (newlyReached ? " 🎉 E-mail verstuurd naar " + cust.email + "!" : ""));
+  };
+
+  const approveRequest = (reqId) => {
+    const code = discountCodes[reqId]?.trim();
+    if (!code) return;
+    const req = requests.find(r => r.id === reqId);
+    const today = new Date().toISOString().slice(0,10);
+    setRequests(requests.map(r => r.id === reqId ? { ...r, status:"approved", code } : r));
+    setCustomers(customers.map(c => c.id === req.custId ? { ...c, transactions:[{ date:today, desc:"Korting ingewisseld: " + req.rewardLabel, amount:-req.korting, type:"redeem" }, ...c.transactions] } : c));
+    flash("Aanvraag goedgekeurd!");
+  };
+
+  const rejectRequest = (reqId) => { setRequests(requests.map(r => r.id === reqId ? { ...r, status:"rejected" } : r)); flash("Aanvraag afgewezen."); };
+
+  const addCustomer = () => {
+    setAddCustErr("");
+    if (!newCust.name || !newCust.email || !newCust.password) { setAddCustErr("Naam, e-mail en wachtwoord zijn verplicht."); return; }
+    if (customers.find(c => c.email === newCust.email)) { setAddCustErr("Dit e-mailadres bestaat al."); return; }
+    setCustomers([...customers, { id:Date.now(), name:newCust.name, email:newCust.email, password:hashPw(newCust.password), totalSpend:0, birthday:newCust.birthday, transactions:[] }]);
+    setNewCust({ name:"", email:"", password:"", birthday:"" }); flash("Klant toegevoegd!");
+  };
+
+  const handleImport = (e) => {
+    setImportErr(""); setImportSuccess("");
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const lines = ev.target.result.split("\n").filter(l => l.trim());
+      const newCustomers = [];
+      let skipped = 0;
+      lines.forEach((line, i) => {
+        if (i === 0 && line.toLowerCase().includes("naam")) return;
+        const parts = line.split(",").map(p => p.trim().replace(/^"|"$/g, ""));
+        if (parts.length < 3) { skipped++; return; }
+        const [name, email, password] = parts;
+        if (!name || !email || !password) { skipped++; return; }
+        if (customers.find(c => c.email.toLowerCase() === email.toLowerCase())) { skipped++; return; }
+        if (newCustomers.find(c => c.email.toLowerCase() === email.toLowerCase())) { skipped++; return; }
+        newCustomers.push({ id:Date.now() + i, name, email, password:hashPw(password), totalSpend:0, birthday:"", transactions:[] });
+      });
+      if (newCustomers.length === 0) { setImportErr("Geen nieuwe klanten gevonden."); return; }
+      setCustomers([...customers, ...newCustomers]);
+      setImportSuccess(newCustomers.length + " klant(en) geimporteerd" + (skipped > 0 ? ", " + skipped + " overgeslagen." : "."));
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  };
+
+  const saveThreshold = () => {
+    setTErr("");
+    const omzet = parseFloat(newT.omzet), korting = parseFloat(newT.korting);
+    if (!omzet || omzet <= 0) { setTErr("Voer een geldig puntenaantal in."); return; }
+    if (!korting || korting <= 0) { setTErr("Voer een geldig kortingsbedrag in."); return; }
+    if (!newT.code.trim()) { setTErr("Voer een kortingscode in."); return; }
+    const label = "€" + korting.toFixed(2).replace(".", ",") + " korting";
+    const sorted = (list) => [...list].sort((a,b) => a.omzet - b.omzet);
+    if (editingT) {
+      setThresholds(sorted(thresholds.map(t => t.id === editingT ? { ...t, omzet, korting, label, code:newT.code.trim().toUpperCase() } : t)));
+      flash("Drempel bijgewerkt!");
+    } else {
+      setThresholds(sorted([...thresholds, { id:"t_"+Date.now(), omzet, korting, label, code:newT.code.trim().toUpperCase() }]));
+      flash("Drempel toegevoegd!");
+    }
+    setEditingT(null); setNewT({ omzet:"", korting:"", code:"" }); setTErr("");
+  };
+
+  const deleteThreshold = (id) => { setThresholds(thresholds.filter(t => t.id !== id)); flash("Drempel verwijderd."); };
+  const startEditT = (t) => { setEditingT(t.id); setNewT({ omzet:String(t.omzet), korting:String(t.korting), code:t.code }); };
+
+  const appUrl = window.location.origin + window.location.pathname;
+  const orderMailLink = appUrl + "?bedrag={order_total}&email={customer_email}&order={order_number}";
+  const copyLink = () => { navigator.clipboard.writeText(orderMailLink).then(() => { setCopiedLink(true); setTimeout(() => setCopiedLink(false), 2500); }); };
+
+  const Header = ({ subtitle }) => (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", padding:"1.5rem 0 1rem", borderBottom:"0.5px solid " + C.border, marginBottom:"1.5rem" }}>
+      <Logo />
+      <h1 style={{ ...fs, fontSize:22, fontWeight:400, margin:"10px 0 2px", letterSpacing:"0.03em" }}>Lotus Mineral Visagie</h1>
+      <p style={{ margin:0, fontSize:12, color:C.textMuted, letterSpacing:"0.07em", textTransform:"uppercase" }}>{subtitle}</p>
+    </div>
+  );
+
+  const ProgressBar = ({ pts }) => {
+    const max = thresholds[thresholds.length-1]?.omzet || 750;
+    const pct = Math.min((pts/max)*100, 100);
+    return (
+      <div style={{ marginBottom:"1.5rem" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+          <span style={{ fontSize:13, color:C.textMuted }}>Puntensaldo</span>
+          <span style={{ fontSize:13, fontWeight:500, color:C.greenDeep }}>{fmtPts(pts)}</span>
+        </div>
+        <div style={{ height:10, background:C.green, borderRadius:10, overflow:"hidden", border:"0.5px solid " + C.border }}>
+          <div style={{ height:"100%", width:pct+"%", background:C.greenDeep, borderRadius:10, transition:"width 0.4s ease" }} />
+        </div>
+        <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
+          {thresholds.map(t => <span key={t.id} style={{ fontSize:10, color:pts>=t.omzet?C.greenDeep:C.textMuted, fontWeight:pts>=t.omzet?500:400 }}>{t.omzet}</span>)}
+        </div>
+      </div>
+    );
+  };
+
+  if (view === "login") return (
+    <div style={s.page}>
+      <Header subtitle="Loyalty portaal" />
+      <div style={{ ...s.card, maxWidth:380, margin:"0 auto" }}>
+        <h3 style={s.h3}>Inloggen</h3>
+        <div style={{ marginBottom:12 }}><label style={s.label}>E-mailadres</label><input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder="jouw@email.nl" /></div>
+        <div style={{ marginBottom:16 }}><label style={s.label}>Wachtwoord</label><input type="password" value={loginPw} onChange={e => setLoginPw(e.target.value)} onKeyDown={e => e.key==="Enter" && handleLogin()} placeholder="••••••••" /></div>
+        {loginErr && <p style={{ color:"#a32d2d", fontSize:13, marginBottom:12 }}>{loginErr}</p>}
+        <button style={s.btnPrimary} onClick={handleLogin}>Inloggen</button>
+        <p style={{ fontSize:12, color:C.textMuted, marginTop:12 }}>Nog geen account? Neem contact op met de salon.</p>
+      </div>
+    </div>
+  );
+
+  if (view === "customer") {
+    const cd = getCust(session.id);
+    if (!cd) return null;
+    const cur = getCurrentThreshold(cd.totalSpend, thresholds);
+    const nxt = getNextThreshold(cd.totalSpend, thresholds);
+    return (
+      <div style={s.page}>
+        <Header subtitle="Mijn loyalty account" />
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.5rem" }}>
+          <p style={{ fontSize:15 }}>Welkom, <strong>{cd.name.split(" ")[0]}</strong></p>
+          <button style={{ cursor:"pointer", fontSize:13, color:C.textMuted, background:"none", border:"none" }} onClick={logout}><i className="ti ti-logout" /> Uitloggen</button>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:"1.5rem" }}>
+          <div style={s.metric}><p style={{ fontSize:13, color:C.textMuted, marginBottom:4 }}>Puntensaldo</p><p style={{ fontSize:26, fontWeight:400, color:C.greenDeep }}>{fmtPts(cd.totalSpend)}</p></div>
+          <div style={s.metric}><p style={{ fontSize:13, color:C.textMuted, marginBottom:4 }}>Huidige korting</p>{cur ? <p style={{ fontSize:16, fontWeight:400, color:C.greenDeep }}>{cur.id==="t6"?"Gratis adviesgesprek":fmt(cur.korting)}</p> : <p style={{ fontSize:13, color:C.textMuted }}>Nog geen korting</p>}</div>
+        </div>
+        <ProgressBar pts={cd.totalSpend} />
+        {nxt && <div style={{ ...s.card, marginBottom:"1.5rem", background:C.greenLight }}><p style={{ fontSize:14, color:C.greenDeep }}>Nog <strong>{fmtPts(nxt.omzet - cd.totalSpend)}</strong> te gaan voor <strong>{nxt.label}</strong></p></div>}
+        {cur && (
+          <div style={{ ...s.card, marginBottom:"1.5rem", border:"1px solid " + C.greenDark }}>
+            <h3 style={s.h3}>Jouw huidige beloning</h3>
+            {cur.id === "t6" ? (
+              <p style={{ fontSize:14, color:C.textMuted }}>Je hebt recht op een <strong>gratis make-up adviesgesprek</strong> ter waarde van €29,95. Neem contact op via <a href="mailto:info@lotusmineralvisagie.nl" style={{ color:C.greenDeep }}>info@lotusmineralvisagie.nl</a> om een afspraak te maken.</p>
+            ) : (
+              <>
+                <p style={{ fontSize:13, color:C.textMuted, marginBottom:12 }}>Je hebt recht op <strong>{cur.label}</strong> op je volgende bestelling.</p>
+                <div style={{ background:C.greenLight, border:"1px dashed " + C.greenDark, borderRadius:8, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div><p style={{ fontSize:12, color:C.textMuted, marginBottom:2 }}>Kortingscode</p><p style={{ fontSize:22, fontWeight:500, color:C.greenDeep, letterSpacing:"0.08em" }}>{cur.code}</p></div>
+                  <i className="ti ti-ticket" style={{ fontSize:28, color:C.green }} />
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        {myRequests.length > 0 && (
+          <div style={{ ...s.card, marginBottom:"1.5rem" }}>
+            <h3 style={s.h3}>Mijn aanvragen</h3>
+            {myRequests.map(req => (
+              <div key={req.id} style={{ padding:"10px 12px", background:C.greenLight, borderRadius:8, border:"0.5px solid " + C.border, marginBottom:8 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div><p style={{ fontSize:14, fontWeight:500 }}>{req.rewardLabel}</p><p style={{ fontSize:12, color:C.textMuted }}>{req.date}</p></div>
+                  <span style={s.badge(req.status==="pending"?"pending":req.status==="approved"?"earn":"redeem")}>{req.status==="pending"?"In behandeling":req.status==="approved"?"Goedgekeurd":"Afgewezen"}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={s.card}>
+          <h3 style={s.h3}>Aankoophistorie</h3>
+          {cd.transactions.length === 0 ? <p style={{ color:C.textMuted, fontSize:14 }}>Nog geen transacties.</p> : (
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              {cd.transactions.map((t,i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0", borderBottom:"0.5px solid " + C.border }}>
+                  <div><p style={{ fontSize:14 }}>{t.desc}</p><p style={{ fontSize:12, color:C.textMuted }}>{t.date}</p></div>
+                  <span style={s.badge(t.type==="purchase"?"earn":"redeem")}>{t.type==="purchase"?"+":""}{t.type==="purchase"?fmtPts(t.amount):fmt(Math.abs(t.amount))}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "admin") return (
+    <div style={s.page}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.25rem" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <Logo />
+          <div><h1 style={{ ...fs, fontSize:18, fontWeight:400, marginBottom:2 }}>Lotus Mineral Visagie</h1><p style={{ fontSize:11, color:C.textMuted, letterSpacing:"0.06em", textTransform:"uppercase" }}>Loyalty beheer</p></div>
+        </div>
+        <button style={{ cursor:"pointer", fontSize:13, color:C.textMuted, background:"none", border:"none" }} onClick={logout}><i className="ti ti-logout" /> Uitloggen</button>
+      </div>
+      {successMsg && <div style={{ background:C.greenLight, color:C.greenDeep, padding:"10px 14px", borderRadius:8, marginBottom:16, fontSize:14, border:"0.5px solid " + C.border }}>{successMsg}</div>}
+      <div style={{ display:"flex", gap:4, marginBottom:"1.5rem", flexWrap:"wrap", borderBottom:"0.5px solid " + C.border, paddingBottom:8 }}>
+        {["customers","requests","orders","kortingen","import","new_customer"].map(t => (
+          <button key={t} style={s.tab(adminTab===t)} onClick={() => setAdminTab(t)}>
+            {t==="customers"&&"Klanten"}
+            {t==="requests"&&<span style={{ display:"flex", alignItems:"center", gap:4 }}>Aanvragen {pendingRequests.length>0&&<span style={{ background:"#ef4444", color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"sans-serif" }}>{pendingRequests.length}</span>}</span>}
+            {t==="orders"&&"Bestellingen"}
+            {t==="kortingen"&&"Kortingen"}
+            {t==="import"&&"Importeren"}
+            {t==="new_customer"&&"Klant toevoegen"}
+          </button>
+        ))}
+      </div>
+
+      {adminTab==="customers" && (
+        <div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:"1.5rem" }}>
+            <div style={s.metric}><p style={{ fontSize:13, color:C.textMuted, marginBottom:4 }}>Klanten</p><p style={{ fontSize:24, fontWeight:400, color:C.greenDeep }}>{customers.length}</p></div>
+            <div style={s.metric}><p style={{ fontSize:13, color:C.textMuted, marginBottom:4 }}>Totale punten</p><p style={{ fontSize:24, fontWeight:400, color:C.greenDeep }}>{fmtPts(customers.reduce((a,c)=>a+c.totalSpend,0))}</p></div>
+            <div style={s.metric}><p style={{ fontSize:13, color:C.textMuted, marginBottom:4 }}>Open aanvragen</p><p style={{ fontSize:24, fontWeight:400, color:pendingRequests.length>0?"#854d0e":C.greenDeep }}>{pendingRequests.length}</p></div>
+          </div>
+          <div style={s.card}>
+            {customers.length===0 ? <p style={{ color:C.textMuted, fontSize:14 }}>Nog geen klanten aangemaakt.</p> : (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {customers.map(c => {
+                  const cur = getCurrentThreshold(c.totalSpend, thresholds);
+                  return (
+                    <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", background:C.greenLight, borderRadius:8, border:"0.5px solid " + C.border }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <div style={s.avatar}>{c.name.split(" ").map(n=>n[0]).slice(0,2).join("")}</div>
+                        <div><p style={{ fontSize:14, fontWeight:500 }}>{c.name}</p><p style={{ fontSize:12, color:C.textMuted }}>{c.email}</p></div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <p style={{ fontWeight:500, color:C.greenDeep }}>{fmtPts(c.totalSpend)}</p>
+                        <p style={{ fontSize:12, color:C.textMuted, marginBottom:4 }}>{cur?"Korting: "+cur.label:"Nog geen korting"}</p>
+                        <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
+                          <button style={s.btnSm} onClick={() => { setSelectedCust(c.id); setAdminTab("orders"); }}>Beheren</button>
+                          <button style={s.btnDanger} onClick={() => { if(window.confirm("Weet je zeker dat je " + c.name + " wilt verwijderen?")) { setCustomers(customers.filter(x => x.id !== c.id)); flash(c.name + " verwijderd."); } }}>Verwijderen</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {adminTab==="requests" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
+          {requests.length===0 && <div style={{ ...s.card, color:C.textMuted, fontSize:14 }}>Nog geen aanvragen ontvangen.</div>}
+          {pendingRequests.length>0 && (
+            <div style={s.card}>
+              <h3 style={s.h3}>Te verwerken</h3>
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {pendingRequests.map(req => (
+                  <div key={req.id} style={{ background:"#fefce8", border:"0.5px solid #fde047", borderRadius:10, padding:"12px 14px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
+                      <div><p style={{ fontSize:14, fontWeight:500 }}>{req.custName}</p><p style={{ fontSize:12, color:C.textMuted }}>{req.custEmail} · {req.date}</p><p style={{ fontSize:13, color:C.greenDeep, marginTop:4 }}>{req.rewardLabel}</p></div>
+                      <span style={s.badge("pending")}>In behandeling</span>
+                    </div>
+                    <div style={{ background:C.white, borderRadius:8, padding:"10px 12px", border:"0.5px solid " + C.border }}>
+                      <p style={{ fontSize:12, color:C.textMuted, marginBottom:6 }}>Kortingscode invoeren:</p>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <input placeholder="bv. LOTUS100" value={discountCodes[req.id]||""} onChange={e => setDiscountCodes({ ...discountCodes, [req.id]:e.target.value })} style={{ letterSpacing:"0.05em" }} />
+                        <button style={{ ...s.btnSuccess, whiteSpace:"nowrap", opacity:discountCodes[req.id]?.trim()?1:0.4 }} onClick={() => approveRequest(req.id)}><i className="ti ti-circle-check" /> Goedkeuren</button>
+                        <button style={s.btnDanger} onClick={() => rejectRequest(req.id)}><i className="ti ti-x" /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {requests.filter(r=>r.status!=="pending").length>0 && (
+            <div style={s.card}>
+              <h3 style={s.h3}>Verwerkt</h3>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {requests.filter(r=>r.status!=="pending").map(req => (
+                  <div key={req.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"0.5px solid " + C.border }}>
+                    <div><p style={{ fontSize:14 }}>{req.custName} — {req.rewardLabel}</p><p style={{ fontSize:12, color:C.textMuted }}>{req.date}{req.code?" · Code: "+req.code:""}</p></div>
+                    <span style={s.badge(req.status==="approved"?"earn":"redeem")}>{req.status==="approved"?"Goedgekeurd":"Afgewezen"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {adminTab==="orders" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
+          <div style={{ ...s.card, background:C.greenLight }}>
+            <p style={{ fontSize:14, fontWeight:500, color:C.greenDeep, marginBottom:4 }}><i className="ti ti-link" /> Snelkoppeling voor in je ordermail</p>
+            <p style={{ fontSize:13, color:C.textMuted, marginBottom:8 }}>Plak deze link in je JouwWeb ordermail.</p>
+            <code style={{ fontSize:11, background:C.white, border:"0.5px solid " + C.border, borderRadius:6, padding:"6px 8px", color:C.text, wordBreak:"break-all", display:"block", marginBottom:8 }}>{orderMailLink}</code>
+            <button style={s.btnPrimary} onClick={copyLink}><i className={"ti " + (copiedLink?"ti-check":"ti-copy")} /> {copiedLink?"Gekopieerd!":"Kopieer link"}</button>
+          </div>
+          <div style={s.card}>
+            <h3 style={s.h3}>Aankoop registreren</h3>
+            <div style={{ marginBottom:12 }}>
+              <label style={s.label}>Klant</label>
+              <select value={orderCust} onChange={e => setOrderCust(e.target.value)}>
+                <option value="">— Kies een klant —</option>
+                {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({fmtPts(c.totalSpend)})</option>)}
+              </select>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+              <div>
+                <label style={s.label}>Bedrag (€1 = 1 punt)</label>
+                <input type="number" min="0.01" step="0.01" value={orderAmt} onChange={e => setOrderAmt(e.target.value)} placeholder="bv. 42.50" />
+                {orderAmt && orderCust && parseFloat(orderAmt)>0 && (() => {
+                  const cust = getCust(parseInt(orderCust));
+                  if (!cust) return null;
+                  const newSpend = cust.totalSpend + parseFloat(orderAmt);
+                  const prev = getCurrentThreshold(cust.totalSpend, thresholds);
+                  const nxt2 = getCurrentThreshold(newSpend, thresholds);
+                  if (nxt2 && (!prev || nxt2.id !== prev.id)) return <p style={{ fontSize:12, color:C.greenDeep, marginTop:4, fontWeight:500 }}>{"🎉 Nieuwe beloning: " + nxt2.label + " — e-mail wordt verstuurd!"}</p>;
+                  return null;
+                })()}
+              </div>
+              <div><label style={s.label}>Ordernummer (optioneel)</label><input value={orderNr} onChange={e => setOrderNr(e.target.value)} placeholder="bv. 1042" /></div>
+            </div>
+            <div style={{ marginBottom:16 }}><label style={s.label}>Omschrijving (optioneel)</label><input value={orderDesc} onChange={e => setOrderDesc(e.target.value)} placeholder="bv. Webshop bestelling / Salon aankoop" /></div>
+            {orderErr && <p style={{ color:"#a32d2d", fontSize:13, marginBottom:12 }}>{orderErr}</p>}
+            <button style={s.btnPrimary} onClick={processOrder}><i className="ti ti-circle-check" /> Registreren</button>
+          </div>
+          {selectedCust && getCust(selectedCust) && (
+            <div style={s.card}>
+              <h3 style={s.h3}>Historie — {getCust(selectedCust).name}</h3>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {getCust(selectedCust).transactions.slice(0,8).map((t,i) => (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:"0.5px solid " + C.border, fontSize:14 }}>
+                    <span>{t.desc} <span style={{ fontSize:12, color:C.textMuted }}>{t.date}</span></span>
+                    <span style={s.badge(t.type==="purchase"?"earn":"redeem")}>{t.type==="purchase"?"+":""}{t.type==="purchase"?fmtPts(t.amount):fmt(Math.abs(t.amount))}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {adminTab==="kortingen" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
+          <div style={s.card}>
+            <h3 style={s.h3}>{editingT?"Drempel bewerken":"Nieuwe drempel"}</h3>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+              <div><label style={s.label}>Punten drempel</label><input type="number" min="1" value={newT.omzet} onChange={e => setNewT({ ...newT, omzet:e.target.value })} placeholder="bv. 100" /></div>
+              <div><label style={s.label}>Korting (€)</label><input type="number" min="0.01" step="0.01" value={newT.korting} onChange={e => setNewT({ ...newT, korting:e.target.value })} placeholder="bv. 2.50" /></div>
+              <div><label style={s.label}>JouwWeb code</label><input value={newT.code} onChange={e => setNewT({ ...newT, code:e.target.value })} placeholder="bv. LOTUS100" /></div>
+            </div>
+            {tErr && <p style={{ color:"#a32d2d", fontSize:13, marginBottom:12 }}>{tErr}</p>}
+            <div style={{ display:"flex", gap:8 }}>
+              <button style={s.btnPrimary} onClick={saveThreshold}>{editingT?"Opslaan":"Toevoegen"}</button>
+              {editingT && <button style={s.btnSm} onClick={() => { setEditingT(null); setNewT({ omzet:"", korting:"", code:"" }); setTErr(""); }}>Annuleren</button>}
+            </div>
+          </div>
+          <div style={s.card}>
+            <h3 style={s.h3}>Huidige drempels</h3>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {thresholds.map(t => (
+                <div key={t.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", background:C.greenLight, borderRadius:8, border:"0.5px solid " + C.border }}>
+                  <div style={{ display:"flex", gap:16, alignItems:"center" }}>
+                    <div><p style={{ fontSize:13, color:C.textMuted }}>Punten</p><p style={{ fontSize:15, fontWeight:500 }}>{fmtPts(t.omzet)}</p></div>
+                    <div><p style={{ fontSize:13, color:C.textMuted }}>Beloning</p><p style={{ fontSize:14, fontWeight:500, color:C.greenDeep }}>{t.label}</p></div>
+                    <div><p style={{ fontSize:13, color:C.textMuted }}>Code</p><p style={{ fontSize:14, fontWeight:500, letterSpacing:"0.05em" }}>{t.code}</p></div>
+                  </div>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button style={s.btnSm} onClick={() => startEditT(t)}><i className="ti ti-edit" /></button>
+                    <button style={s.btnDanger} onClick={() => deleteThreshold(t.id)}><i className="ti ti-trash" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {adminTab==="import" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
+          <div style={{ ...s.card, background:C.greenLight }}>
+            <h3 style={s.h3}>CSV bestand uploaden</h3>
+            <p style={{ fontSize:13, color:C.textMuted, marginBottom:12 }}>Maak een CSV bestand met de volgende kolommen:</p>
+            <div style={{ background:C.white, border:"0.5px solid " + C.border, borderRadius:6, padding:"8px 12px", marginBottom:12, fontSize:12, fontFamily:"monospace", color:C.text }}>
+              naam,email,wachtwoord<br/>
+              Sophie Jansen,sophie@email.nl,welkom123
+            </div>
+            <p style={{ fontSize:12, color:C.textMuted, marginBottom:16 }}>Sla op als <strong>.csv</strong> via Excel: Bestand → Opslaan als → CSV.</p>
+            <label style={{ ...s.btnPrimary, display:"inline-block", cursor:"pointer" }}>
+              <i className="ti ti-upload" /> Bestand kiezen
+              <input type="file" accept=".csv" onChange={handleImport} style={{ display:"none" }} />
+            </label>
+            {importErr && <p style={{ color:"#a32d2d", fontSize:13, marginTop:12 }}>{importErr}</p>}
+            {importSuccess && <p style={{ color:C.greenDeep, fontSize:13, marginTop:12, fontWeight:500 }}>✅ {importSuccess}</p>}
+          </div>
+        </div>
+      )}
+
+      {adminTab==="new_customer" && (
+        <div style={s.card}>
+          <h3 style={s.h3}>Nieuwe klant toevoegen</h3>
+          <div style={{ marginBottom:12 }}><label style={s.label}>Naam</label><input value={newCust.name} onChange={e => setNewCust({ ...newCust, name:e.target.value })} placeholder="Voor- en achternaam" /></div>
+          <div style={{ marginBottom:12 }}><label style={s.label}>E-mailadres</label><input type="email" value={newCust.email} onChange={e => setNewCust({ ...newCust, email:e.target.value })} placeholder="klant@email.nl" /></div>
+          <div style={{ marginBottom:12 }}><label style={s.label}>Wachtwoord</label><input type="text" value={newCust.password} onChange={e => setNewCust({ ...newCust, password:e.target.value })} placeholder="Tijdelijk wachtwoord" /></div>
+          <div style={{ marginBottom:16 }}><label style={s.label}>Geboortedatum</label><input type="date" value={newCust.birthday} onChange={e => setNewCust({ ...newCust, birthday:e.target.value })} /></div>
+          {addCustErr && <p style={{ color:"#a32d2d", fontSize:13, marginBottom:12 }}>{addCustErr}</p>}
+          <button style={s.btnPrimary} onClick={addCustomer}>Klant toevoegen</button>
+        </div>
+      )}
+    </div>
+  );
+
+  return null;
 }
+
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
