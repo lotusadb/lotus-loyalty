@@ -55,7 +55,29 @@ const stuurKlantMail = async (naam, email, label, code) => {
   } catch(e) { console.error("Klant mail fout:", e); }
 };
 
-const C = { green:"#d2e8d5", greenDark:"#7aad82", greenDeep:"#3d6b45", greenLight:"#edf7ef", text:"#2c2c2a", textMuted:"#6b7c6e", white:"#ffffff", border:"#c0d9c4" };
+const stuurVipMail = async (naam, email, code) => {
+  try {
+    const htmlBody = "<div style='font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:30px 20px;'>"
+      + "<div style='text-align:center;margin-bottom:20px;'><img src='" + LOGO_URL + "' width='150' alt='Lotus Mineral Visagie' /></div>"
+      + "<h2 style='color:#3d6b45;font-weight:400;text-align:center;'>Welkom in de Lotus VIP Club! 🌸</h2>"
+      + "<p style='color:#6b7c6e;text-align:center;margin:10px 0 20px;'>Beste " + naam.split(" ")[0] + ",</p>"
+      + "<p style='color:#6b7c6e;margin-bottom:16px;'>Wat fijn dat je deel uitmaakt van onze exclusieve VIP Club!</p>"
+      + "<p style='color:#6b7c6e;margin-bottom:20px;'>Als VIP-lid ontvang je voortaan <strong style='color:#3d6b45;'>5% korting</strong> op al je aankopen bij Lotus Mineral Visagie.</p>"
+      + "<div style='background:#edf7ef;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;'>"
+      + "<p style='color:#6b7c6e;font-size:13px;margin-bottom:6px;'>Jouw persoonlijke VIP-kortingscode</p>"
+      + "<p style='color:#3d6b45;font-size:26px;font-weight:500;letter-spacing:0.1em;border:1px dashed #7aad82;border-radius:8px;padding:8px 16px;display:inline-block;'>" + code + "</p>"
+      + "<p style='color:#6b7c6e;font-size:12px;margin-top:8px;'>Gebruik deze code bij elke bestelling op onze webshop.</p>"
+      + "</div>"
+      + "<hr style='border:none;border-top:1px solid #c0d9c4;margin:20px 0;'/>"
+      + "<p style='color:#6b7c6e;font-size:13px;text-align:center;'>Met vriendelijke groet,<br><b>Anita</b><br>Lotus Mineral Visagie<br>"
+      + "<a href='mailto:info@lotusmineralvisagie.nl' style='color:#3d6b45;'>info@lotusmineralvisagie.nl</a></p></div>";
+    await fetch(GMAIL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: email, subject: "Welkom in de Lotus VIP Club! 🌸", htmlBody })
+    });
+  } catch(e) { console.error("VIP mail fout:", e); }
+};
 const fs = { fontFamily: "Georgia, serif" };
 const fmt = (n) => "€" + Number(n).toFixed(2).replace(".", ",");
 const fmtPts = (n) => Math.floor(n) + " punten";
@@ -141,6 +163,16 @@ function App() {
   const [tErr, setTErr] = useState("");
   const [importErr, setImportErr] = useState("");
   const [importSuccess, setImportSuccess] = useState("");
+  const [vipCodes, setVipCodes] = useState({});
+
+  const saveVipCode = (custId) => {
+    const code = vipCodes[custId]?.trim();
+    if (!code) return;
+    const cust = getCust(custId);
+    setCustomers(customers.map(c => c.id === custId ? { ...c, vipCode: code } : c));
+    stuurVipMail(cust.name, cust.email, code);
+    flash("VIP-code opgeslagen en welkomstmail verstuurd naar " + cust.email + "!");
+  };
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
@@ -320,6 +352,19 @@ function App() {
           <div style={s.metric}><p style={{ fontSize:13, color:C.textMuted, marginBottom:4 }}>Huidige korting</p>{cur ? <p style={{ fontSize:16, fontWeight:400, color:C.greenDeep }}>{cur.id==="t6"?"Gratis adviesgesprek":fmt(cur.korting)}</p> : <p style={{ fontSize:13, color:C.textMuted }}>Nog geen korting</p>}</div>
         </div>
         <ProgressBar pts={cd.totalSpend} />
+        {cd.vipCode && (
+          <div style={{ ...s.card, marginBottom:"1.5rem", background:"#fef9c3", border:"1px solid #f59e0b" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+              <i className="ti ti-crown" style={{ fontSize:20, color:"#b45309" }} />
+              <h3 style={{ ...s.h3, margin:0, color:"#b45309" }}>VIP Lid</h3>
+            </div>
+            <p style={{ fontSize:13, color:"#78350f", marginBottom:12 }}>Je bent een exclusief VIP-lid van Lotus Mineral Visagie! Je ontvangt <strong>5% korting</strong> op al je aankopen.</p>
+            <div style={{ background:"#ffffff", border:"1px dashed #f59e0b", borderRadius:8, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div><p style={{ fontSize:12, color:"#92400e", marginBottom:2 }}>Jouw persoonlijke VIP-code</p><p style={{ fontSize:22, fontWeight:500, color:"#b45309", letterSpacing:"0.08em" }}>{cd.vipCode}</p></div>
+              <i className="ti ti-crown" style={{ fontSize:28, color:"#f59e0b" }} />
+            </div>
+          </div>
+        )}
         {nxt && <div style={{ ...s.card, marginBottom:"1.5rem", background:C.greenLight }}><p style={{ fontSize:14, color:C.greenDeep }}>Nog <strong>{fmtPts(nxt.omzet - cd.totalSpend)}</strong> te gaan voor <strong>{nxt.label}</strong></p></div>}
         {cur && (
           <div style={{ ...s.card, marginBottom:"1.5rem", border:"1px solid " + C.greenDark }}>
@@ -378,7 +423,7 @@ function App() {
       </div>
       {successMsg && <div style={{ background:C.greenLight, color:C.greenDeep, padding:"10px 14px", borderRadius:8, marginBottom:16, fontSize:14, border:"0.5px solid " + C.border }}>{successMsg}</div>}
       <div style={{ display:"flex", gap:4, marginBottom:"1.5rem", flexWrap:"wrap", borderBottom:"0.5px solid " + C.border, paddingBottom:8 }}>
-        {["customers","requests","orders","kortingen","import","new_customer"].map(t => (
+        {["customers","requests","orders","kortingen","import","new_customer","vip"].map(t => (
           <button key={t} style={s.tab(adminTab===t)} onClick={() => setAdminTab(t)}>
             {t==="customers"&&"Klanten"}
             {t==="requests"&&<span style={{ display:"flex", alignItems:"center", gap:4 }}>Aanvragen {pendingRequests.length>0&&<span style={{ background:"#ef4444", color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"sans-serif" }}>{pendingRequests.length}</span>}</span>}
@@ -386,6 +431,7 @@ function App() {
             {t==="kortingen"&&"Kortingen"}
             {t==="import"&&"Importeren"}
             {t==="new_customer"&&"Klant toevoegen"}
+            {t==="vip"&&"👑 VIP"}
           </button>
         ))}
       </div>
@@ -411,8 +457,10 @@ function App() {
                       <div style={{ textAlign:"right" }}>
                         <p style={{ fontWeight:500, color:C.greenDeep }}>{fmtPts(c.totalSpend)}</p>
                         <p style={{ fontSize:12, color:C.textMuted, marginBottom:4 }}>{cur?"Korting: "+cur.label:"Nog geen korting"}</p>
+                        {c.vipCode && <p style={{ fontSize:12, color:"#b45309", marginBottom:4 }}>👑 VIP: {c.vipCode}</p>}
                         <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
                           <button style={s.btnSm} onClick={() => { setSelectedCust(c.id); setAdminTab("orders"); }}>Beheren</button>
+                          <button style={{ ...s.btnSm, color:"#b45309", borderColor:"#f59e0b" }} onClick={() => { setSelectedCust(c.id); setAdminTab("vip"); }}>VIP</button>
                           <button style={s.btnDanger} onClick={() => { if(window.confirm("Weet je zeker dat je " + c.name + " wilt verwijderen?")) { setCustomers(customers.filter(x => x.id !== c.id)); flash(c.name + " verwijderd."); } }}>Verwijderen</button>
                         </div>
                       </div>
@@ -576,7 +624,51 @@ function App() {
         </div>
       )}
 
-      {adminTab==="new_customer" && (
+      {adminTab==="vip" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:"1.25rem" }}>
+          <div style={{ ...s.card, background:"#fef9c3", border:"1px solid #f59e0b" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+              <i className="ti ti-crown" style={{ fontSize:20, color:"#b45309" }} />
+              <h3 style={{ ...s.h3, margin:0, color:"#b45309" }}>VIP-code toewijzen</h3>
+            </div>
+            <p style={{ fontSize:13, color:"#78350f", marginBottom:16 }}>Selecteer een klant, maak een persoonlijke VIP-code aan in JouwWeb en voer hem hier in. De klant ontvangt automatisch een welkomstmail.</p>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ ...s.label, color:"#92400e" }}>Klant</label>
+              <select style={{ ...s.inp, borderColor:"#f59e0b" }} value={selectedCust||""} onChange={e => setSelectedCust(Number(e.target.value)||null)}>
+                <option value="">— Kies een klant —</option>
+                {customers.map(c => <option key={c.id} value={c.id}>{c.name} {c.vipCode?"(VIP ✓)":""}</option>)}
+              </select>
+            </div>
+            {selectedCust && getCust(selectedCust) && (
+              <div style={{ marginBottom:16 }}>
+                <label style={{ ...s.label, color:"#92400e" }}>Persoonlijke VIP-code</label>
+                <input value={vipCodes[selectedCust]||getCust(selectedCust).vipCode||""} onChange={e => setVipCodes({ ...vipCodes, [selectedCust]:e.target.value })} placeholder={"bv. LOTUSVIP-" + getCust(selectedCust).name.split(" ")[0].toUpperCase()} style={{ borderColor:"#f59e0b" }} />
+              </div>
+            )}
+            <button style={{ ...s.btnPrimary, background:"#b45309", opacity:selectedCust&&vipCodes[selectedCust]?.trim()?1:0.4 }} onClick={() => selectedCust && saveVipCode(selectedCust)} disabled={!selectedCust||!vipCodes[selectedCust]?.trim()}>
+              <i className="ti ti-crown" /> VIP-code opslaan & mail versturen
+            </button>
+          </div>
+          <div style={s.card}>
+            <h3 style={s.h3}>Huidige VIP-leden</h3>
+            {customers.filter(c=>c.vipCode).length===0 ? <p style={{ color:C.textMuted, fontSize:14 }}>Nog geen VIP-leden.</p> : (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {customers.filter(c=>c.vipCode).map(c => (
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", background:"#fef9c3", borderRadius:8, border:"1px solid #f59e0b" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <i className="ti ti-crown" style={{ fontSize:18, color:"#b45309" }} />
+                      <div><p style={{ fontSize:14, fontWeight:500 }}>{c.name}</p><p style={{ fontSize:12, color:"#92400e" }}>{c.email}</p></div>
+                    </div>
+                    <p style={{ fontSize:14, fontWeight:500, color:"#b45309", letterSpacing:"0.05em" }}>{c.vipCode}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
         <div style={s.card}>
           <h3 style={s.h3}>Nieuwe klant toevoegen</h3>
           <div style={{ marginBottom:12 }}><label style={s.label}>Naam</label><input value={newCust.name} onChange={e => setNewCust({ ...newCust, name:e.target.value })} placeholder="Voor- en achternaam" /></div>
